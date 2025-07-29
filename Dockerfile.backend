@@ -1,0 +1,26 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# システムパッケージのインストール
+RUN apt-get update && apt-get install -y \
+    nmap \
+    net-tools \
+    iputils-ping \
+    && rm -rf /var/lib/apt/lists/*
+
+# Pythonパッケージのインストール
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# アプリケーションコードのコピー
+COPY backend ./backend
+COPY config ./config
+COPY database ./database
+
+# データベースディレクトリの作成
+RUN mkdir -p /app/database
+
+EXPOSE 8000
+
+CMD ["python", "-m", "uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
