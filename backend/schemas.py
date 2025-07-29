@@ -1,5 +1,5 @@
 """
-Pydantic¹­üÞš©
+Pydanticã‚¹ã‚­ãƒ¼ãƒžå®šç¾©
 """
 from pydantic import BaseModel
 from datetime import datetime

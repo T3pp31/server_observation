@@ -1,5 +1,5 @@
 """
-Çü¿Ùü¹¥šh»Ã·çó¡
+ãƒ‡ãƒ¼ã‚¿ãƒ™ãƒ¼ã‚¹æ¥ç¶šè¨­å®š
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -9,13 +9,13 @@ sys.path.append('..')
 from config.config import DATABASE_URL
 from backend.models import Base
 
-# Çü¿Ùü¹¨ó¸ón\
+# ã‚¨ãƒ³ã‚¸ãƒ³ã®ä½œæˆ
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 
-# »Ã·çóíü«ë¯é¹n\
+# ã‚»ãƒƒã‚·ãƒ§ãƒ³ã®ä½œæˆ
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Çü¿Ùü¹nX'
+# ã‚»ãƒƒã‚·ãƒ§ãƒ³å–å¾—é–¢æ•°
 def get_db():
     db = SessionLocal()
     try:
@@ -23,6 +23,6 @@ def get_db():
     finally:
         db.close()
 
-# ÆüÖën\
+# ãƒ†ãƒ¼ãƒ–ãƒ«ä½œæˆ
 def init_db():
     Base.metadata.create_all(bind=engine)

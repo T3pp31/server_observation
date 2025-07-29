@@ -1,5 +1,5 @@
 """
-FastAPIá¤ó¢×ê±ü·çó
+FastAPIã‚¢ãƒ—ãƒªã‚±ãƒ¼ã‚·ãƒ§ãƒ³
 """
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,10 +17,10 @@ from backend.network_scanner import NetworkScanner
 from backend.port_scanner import PortScanner
 from config.config import API_CONFIG
 
-# FastAPI¢×ê±ü·çón\
-app = FastAPI(title="LANã–Äüë API")
+# FastAPIã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹ã®ä½œæˆ
+app = FastAPI(title="LANç›£è¦– API")
 
-# CORS-š
+# CORSè¨­å®š
 app.add_middleware(
     CORSMiddleware,
     allow_origins=API_CONFIG["cors_origins"],
@@ -29,23 +29,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# wÕBkÇü¿Ùü¹’
+# èµ·å‹•æ™‚ã®å‡¦ç†
 @app.on_event("startup")
 def startup_event():
     init_db()
 
-# ¹­ãÊü¤ó¹¿ó¹
+# ã‚¹ã‚­ãƒ£ãƒŠãƒ¼ã‚¤ãƒ³ã‚¹ã‚¿ãƒ³ã‚¹
 network_scanner = NetworkScanner()
 port_scanner = PortScanner()
 
 @app.get("/")
 def read_root():
-    return {"message": "LANã–Äüë API"}
+    return {"message": "LANç›£è¦– API"}
 
 @app.get("/api/devices", response_model=List[schemas.Device])
 def get_devices(db: Session = Depends(get_db)):
     """
-    {2nh_h’Ö—
+    å…¨ãƒ‡ãƒã‚¤ã‚¹ã®ä¸€è¦§ã‚’å–å¾—
     """
     devices = db.query(models.Device).all()
     return devices
@@ -53,23 +53,23 @@ def get_devices(db: Session = Depends(get_db)):
 @app.get("/api/devices/{ip_address}", response_model=schemas.DeviceDetail)
 def get_device_detail(ip_address: str, db: Session = Depends(get_db)):
     """
-    yš_hns0Å1’Ö—
+    ç‰¹å®šãƒ‡ãƒã‚¤ã‚¹ã®è©³ç´°æƒ…å ±ã‚’å–å¾—
     """
     device = db.query(models.Device).filter(models.Device.ip_address == ip_address).first()
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
-    # İüÈ¹­ãóPœ’Ö—
+    # ãƒãƒ¼ãƒˆã‚¹ã‚­ãƒ£ãƒ³çµæœã‚’å–å¾—
     port_scans = db.query(models.PortScan).filter(
         models.PortScan.device_ip == ip_address
     ).order_by(models.PortScan.scan_time.desc()).limit(10).all()
     
-    # HTTPì¹İó¹Å1’Ö—
+    # HTTPãƒ¬ã‚¹ãƒãƒ³ã‚¹æƒ…å ±ã‚’å–å¾—
     http_responses = db.query(models.HttpResponse).filter(
         models.HttpResponse.device_ip == ip_address
     ).order_by(models.HttpResponse.scan_time.desc()).limit(5).all()
     
-    # ØÃÀüÅ1’JSONK‰dictbk	Û
+    # ãƒ˜ãƒƒãƒ€ãƒ¼æƒ…å ±ã‚’JSONã‹ã‚‰dictã«å¤‰æ›
     for response in http_responses:
         if response.headers:
             response.headers = json.loads(response.headers)
@@ -85,25 +85,25 @@ def get_device_detail(ip_address: str, db: Session = Depends(get_db)):
 @app.post("/api/scan/network")
 def scan_network(scan_request: schemas.ScanRequest, db: Session = Depends(get_db)):
     """
-    ÍÃÈïü¯¹­ãó’ŸL
+    ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ã‚¹ã‚­ãƒ£ãƒ³ã‚’å®Ÿè¡Œ
     """
     devices = network_scanner.scan_network(scan_request.network_range)
     
-    # Çü¿Ùü¹kİX
+    # ã‚¹ã‚­ãƒ£ãƒ³çµæœã‚’ä¿å­˜
     for device_data in devices:
-        # âXnÇĞ¤¹’Á§Ã¯
+        # æ—¢å­˜ã®ãƒ‡ãƒã‚¤ã‚¹ã‹ãƒã‚§ãƒƒã‚¯
         existing_device = db.query(models.Device).filter(
             models.Device.ip_address == device_data['ip_address']
         ).first()
         
         if existing_device:
-            # ô°
+            # æ›´æ–°
             for key, value in device_data.items():
                 if value is not None:
                     setattr(existing_device, key, value)
             existing_device.last_seen = datetime.utcnow()
         else:
-            # °\
+            # æ–°è¦ä½œæˆ
             new_device = models.Device(**device_data)
             db.add(new_device)
     
@@ -117,12 +117,12 @@ def scan_network(scan_request: schemas.ScanRequest, db: Session = Depends(get_db
 @app.post("/api/scan/ports")
 def scan_ports(scan_request: schemas.ScanRequest, db: Session = Depends(get_db)):
     """
-    İüÈ¹­ãó’ŸL
+    ãƒãƒ¼ãƒˆã‚¹ã‚­ãƒ£ãƒ³ã‚’å®Ÿè¡Œ
     """
     if not scan_request.ip_address:
         raise HTTPException(status_code=400, detail="IP address is required")
     
-    # ÇĞ¤¹nX(º
+    # ãƒ‡ãƒã‚¤ã‚¹ã®å­˜åœ¨ç¢ºèª
     device = db.query(models.Device).filter(
         models.Device.ip_address == scan_request.ip_address
     ).first()
@@ -130,10 +130,10 @@ def scan_ports(scan_request: schemas.ScanRequest, db: Session = Depends(get_db))
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
     
-    # İüÈ¹­ãóŸL
+    # ãƒãƒ¼ãƒˆã‚¹ã‚­ãƒ£ãƒ³å®Ÿè¡Œ
     scan_results = port_scanner.scan_ports(scan_request.ip_address)
     
-    # İüÈ¹­ãóPœ’İX
+    # ãƒãƒ¼ãƒˆã‚¹ã‚­ãƒ£ãƒ³çµæœã‚’ä¿å­˜
     for port_info in scan_results['port_scans']:
         port_scan = models.PortScan(
             device_ip=scan_request.ip_address,
@@ -141,9 +141,9 @@ def scan_ports(scan_request: schemas.ScanRequest, db: Session = Depends(get_db))
         )
         db.add(port_scan)
     
-    # HTTPì¹İó¹Å1’İX
+    # HTTPãƒ¬ã‚¹ãƒãƒ³ã‚¹æƒ…å ±ã‚’ä¿å­˜
     for http_info in scan_results['http_responses']:
-        # ØÃÀü’JSONbgİX
+        # ãƒ˜ãƒƒãƒ€ãƒ¼ã‚’JSONæ–‡å­—åˆ—ã«å¤‰æ›
         headers_json = json.dumps(http_info['headers']) if http_info['headers'] else None
         
         http_response = models.HttpResponse(
@@ -170,7 +170,7 @@ def update_device(
     db: Session = Depends(get_db)
 ):
     """
-    _hÅ1’ô°
+    ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã®æ›´æ–°
     """
     device = db.query(models.Device).filter(
         models.Device.ip_address == ip_address

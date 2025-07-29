@@ -1,5 +1,5 @@
 """
-ÍÃÈïü¯¹­ãó_ı
+ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ã‚¹ã‚­ãƒ£ãƒŠãƒ¼ãƒ¢ã‚¸ãƒ¥ãƒ¼ãƒ«
 """
 import nmap
 import socket
@@ -16,7 +16,7 @@ class NetworkScanner:
         
     def scan_network(self, network_range: str = None) -> List[Dict]:
         """
-        ÍÃÈïü¯…n_h’¹­ãó
+        ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯å†…ã®ãƒ‡ãƒã‚¤ã‚¹ã‚’ã‚¹ã‚­ãƒ£ãƒ³
         """
         if not network_range:
             network_range = NETWORK_SCAN_CONFIG["default_network"]
@@ -24,7 +24,7 @@ class NetworkScanner:
         devices = []
         
         try:
-            # ping¹­ãó’ŸL
+            # pingã‚¹ã‚­ãƒ£ãƒ³ã‚’å®Ÿè¡Œ
             self.nm.scan(hosts=network_range, arguments='-sn')
             
             for host in self.nm.all_hosts():
@@ -36,7 +36,7 @@ class NetworkScanner:
                     'vendor': self._get_vendor(host)
                 }
                 
-                # OSÅ1nÖ—’f‹
+                # OSæƒ…å ±ã®å–å¾—ã‚’è©¦ã¿ã‚‹
                 os_info = self._get_os_info(host)
                 if os_info:
                     device_info['os_info'] = os_info
@@ -44,13 +44,13 @@ class NetworkScanner:
                 devices.append(device_info)
                 
         except Exception as e:
-            print(f"ÍÃÈïü¯¹­ãó¨éü: {e}")
+            print(f"ãƒãƒƒãƒˆãƒ¯ãƒ¼ã‚¯ã‚¹ã‚­ãƒ£ãƒ³ã‚¨ãƒ©ãƒ¼: {e}")
             
         return devices
     
     def _get_hostname(self, ip: str) -> Optional[str]:
         """
-        IP¢Éì¹K‰Û¹È’Ö—
+        IPã‚¢ãƒ‰ãƒ¬ã‚¹ã‹ã‚‰ãƒ›ã‚¹ãƒˆåã‚’å–å¾—
         """
         try:
             hostname, _, _ = socket.gethostbyaddr(ip)
@@ -60,13 +60,13 @@ class NetworkScanner:
             
     def _get_mac_address(self, ip: str) -> Optional[str]:
         """
-        MAC¢Éì¹’Ö—ARP	
+        MACã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’å–å¾—ï¼ˆARPãƒ†ãƒ¼ãƒ–ãƒ«ã‹ã‚‰ï¼‰
         """
         try:
-            # Linuxgnarp³ŞóÉŸL
+            # Linuxç”¨ã®arpã‚³ãƒãƒ³ãƒ‰ã‚’å®Ÿè¡Œ
             result = subprocess.run(['arp', '-n', ip], capture_output=True, text=True)
             if result.returncode == 0:
-                # MAC¢Éì¹’½ú
+                # MACã‚¢ãƒ‰ãƒ¬ã‚¹ã‚’æŠ½å‡º
                 match = re.search(r'([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})', result.stdout)
                 if match:
                     return match.group(0)
@@ -76,7 +76,7 @@ class NetworkScanner:
         
     def _get_vendor(self, ip: str) -> Optional[str]:
         """
-        MAC¢Éì¹K‰ÙóÀüÅ1’Ö—
+        MACã‚¢ãƒ‰ãƒ¬ã‚¹ã‹ã‚‰ãƒ™ãƒ³ãƒ€ãƒ¼æƒ…å ±ã‚’å–å¾—
         """
         try:
             if ip in self.nm.all_hosts() and 'vendor' in self.nm[ip]:
@@ -89,10 +89,10 @@ class NetworkScanner:
         
     def _get_os_info(self, ip: str) -> Optional[str]:
         """
-        OSÅ1’¨,
+        OSæƒ…å ±ã‚’æ¨æ¸¬
         """
         try:
-            # OSú¹­ãóroot)P	
+            # OSã‚¹ã‚­ãƒ£ãƒ³ï¼ˆè¦rootæ¨©é™ï¼‰
             self.nm.scan(hosts=ip, arguments='-O')
             if 'osmatch' in self.nm[ip]:
                 os_matches = self.nm[ip]['osmatch']

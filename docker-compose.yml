@@ -6,16 +6,13 @@ services:
       context: .
       dockerfile: Dockerfile.backend
     container_name: lan-monitor-backend
-    ports:
-      - "8000:8000"
+    network_mode: host
     volumes:
       - ./backend:/app/backend
       - ./config:/app/config
       - ./database:/app/database
     environment:
       - PYTHONUNBUFFERED=1
-    networks:
-      - lan-monitor-network
     restart: unless-stopped
 
   frontend:
@@ -23,8 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: lan-monitor-frontend
-    ports:
-      - "3000:3000"
+    network_mode: host
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
@@ -32,13 +28,7 @@ services:
       - REACT_APP_API_URL=http://localhost:8000
     depends_on:
       - backend
-    networks:
-      - lan-monitor-network
     restart: unless-stopped
-
-networks:
-  lan-monitor-network:
-    driver: bridge
 
 volumes:
   database:
