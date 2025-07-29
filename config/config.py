@@ -29,7 +29,12 @@ API_CONFIG = {
     "host": "0.0.0.0",
     "port": 8000,
     "reload": True,
-    "cors_origins": ["http://localhost:3000"],  # フロントエンドのURL
+    "cors_origins": [
+        "http://localhost:3000",
+        "http://10.10.15.212:3000",
+        "http://127.0.0.1:3000",
+        "*"  # 開発環境では全てのオリジンを許可
+    ],
 }
 
 # セキュリティ設定

@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Device, DeviceDetail } from '../types';
 
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_URL = process.env.REACT_APP_API_URL || 'http://10.10.15.212:8000';
 
 const api = axios.create({
   baseURL: API_URL,

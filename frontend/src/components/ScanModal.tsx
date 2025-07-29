@@ -13,16 +13,52 @@ const ScanModal: React.FC<ScanModalProps> = ({ show, onHide, onScanComplete }) =
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const normalizeNetworkRange = (input: string): string => {
+    const trimmed = input.trim();
+    
+    // すでにCIDR形式の場合はそのまま返す
+    if (trimmed.includes('/')) {
+      return trimmed;
+    }
+    
+    // 単一IPアドレスの場合は/32を追加
+    // 簡易的なIPv4チェック
+    const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (ipv4Pattern.test(trimmed)) {
+      return `${trimmed}/32`;
+    }
+    
+    // それ以外はそのまま返す（バックエンドでバリデーション）
+    return trimmed;
+  };
+
   const handleScan = async () => {
     setScanning(true);
     setError(null);
     try {
-      await deviceService.scanNetwork(networkRange);
+      const normalizedRange = normalizeNetworkRange(networkRange);
+      console.log('Scanning network range:', normalizedRange);
+      
+      const response = await deviceService.scanNetwork(normalizedRange);
+      console.log('Scan response:', response);
+      
       onScanComplete();
       onHide();
-    } catch (error) {
-      setError('ネットワークスキャンに失敗しました');
-      console.error(error);
+    } catch (error: any) {
+      console.error('Scan error:', error);
+      
+      // エラーメッセージを詳細化
+      if (error.response) {
+        // APIからのエラーレスポンス
+        const errorMessage = error.response.data?.detail || error.response.data?.message || 'ネットワークスキャンに失敗しました';
+        setError(`エラー: ${errorMessage}`);
+      } else if (error.request) {
+        // リクエストは送信されたがレスポンスがない
+        setError('サーバーに接続できません');
+      } else {
+        // その他のエラー
+        setError('ネットワークスキャンに失敗しました');
+      }
     } finally {
       setScanning(false);
     }
@@ -45,7 +81,7 @@ const ScanModal: React.FC<ScanModalProps> = ({ show, onHide, onScanComplete }) =
               disabled={scanning}
             />
             <Form.Text className="text-muted">
-              CIDR形式でネットワーク範囲を指定してください
+              CIDR形式（例: 192.168.1.0/24）または単一IPアドレス（例: 192.168.1.100）を入力してください
             </Form.Text>
           </Form.Group>
         </Form>
