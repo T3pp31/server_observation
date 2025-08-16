@@ -21,7 +21,7 @@ NETWORK_SCAN_CONFIG = {
 PORT_SCAN_CONFIG = {
     "http_ports": [80, 8080, 8000, 3000],
     "https_ports": [443, 8443],
-    "scan_timeout": 5,  # ポートスキャンタイムアウト（秒）
+    "scan_timeout": 15,  # ポートスキャンタイムアウト（秒）
 }
 
 # API設定

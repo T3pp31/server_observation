@@ -114,6 +114,25 @@ def scan_network(scan_request: schemas.ScanRequest, db: Session = Depends(get_db
         "devices_found": len(devices)
     }
 
+@app.delete("/api/devices/reset")
+def reset_devices(db: Session = Depends(get_db)):
+    """
+    全デバイス情報をリセット（削除）
+    """
+    try:
+        # 全デバイスを削除
+        deleted_count = db.query(models.Device).count()
+        db.query(models.Device).delete()
+        db.commit()
+        
+        return {
+            "message": "All devices have been reset",
+            "deleted_count": deleted_count
+        }
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Failed to reset devices: {str(e)}")
+
 @app.post("/api/scan/ports")
 def scan_ports(scan_request: schemas.ScanRequest, db: Session = Depends(get_db)):
     """

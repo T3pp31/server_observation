@@ -5,6 +5,7 @@ import nmap
 import socket
 import subprocess
 import re
+import concurrent.futures
 from typing import Dict, List, Optional
 import sys
 sys.path.append('..')
@@ -26,30 +27,37 @@ class NetworkScanner:
         try:
             print(f"スキャン開始: {network_range}")
             
-            # pingスキャンを実行
-            self.nm.scan(hosts=network_range, arguments='-sn')
+            # Docker環境かどうかの判定
+            is_docker = self._is_running_in_docker()
+            print(f"Docker環境での実行: {is_docker}")
             
-            # スキャン結果を処理
-            for host in self.nm.all_hosts():
-                print(f"ホスト発見: {host}")
-                device_info = {
-                    'ip_address': host,
-                    'status': 'online' if self.nm[host].state() == 'up' else 'offline',
-                    'hostname': self._get_hostname(host),
-                    'mac_address': self._get_mac_address(host),
-                    'vendor': self._get_vendor(host)
-                }
+            if is_docker:
+                # Docker環境の場合は、より制限的なスキャンを行う
+                devices = self._scan_with_ping_validation(network_range)
+            else:
+                # 通常環境での nmap スキャン
+                self.nm.scan(hosts=network_range, arguments='-sn -R')
+                active_hosts = self.nm.all_hosts()
+                print(f"応答したホスト数: {len(active_hosts)}")
                 
-                # OS情報の取得を試みる（オプション）
-                # 注：OS検出には root 権限が必要で、時間がかかるため、デフォルトでは無効
-                # os_info = self._get_os_info(host)
-                # if os_info:
-                #     device_info['os_info'] = os_info
+                for host in active_hosts:
+                    host_state = self.nm[host].state()
+                    print(f"ホスト発見: {host} (状態: {host_state})")
                     
-                devices.append(device_info)
+                    if host_state == 'up':
+                        device_info = {
+                            'ip_address': host,
+                            'status': 'online',
+                            'hostname': self._get_hostname(host),
+                            'mac_address': self._get_mac_address(host),
+                            'vendor': self._get_vendor(host)
+                        }
+                        devices.append(device_info)
+                    else:
+                        print(f"ホスト {host} は非アクティブ状態: {host_state}")
             
-            # スキャン結果が空の場合、単一IPとして処理
-            if not devices and '/' not in network_range:
+            # スキャン結果が空の場合、単一IPアドレスのみ処理
+            if not devices and '/' not in network_range and '-' not in network_range:
                 print(f"単一IPアドレスとして処理: {network_range}")
                 # 単一IPアドレスの場合は直接チェック
                 device_info = {
@@ -84,11 +92,117 @@ class NetworkScanner:
         """
         IPアドレスからホスト名を取得
         """
+        # Method 1: socket.gethostbyaddr
         try:
+            socket.setdefaulttimeout(3)
             hostname, _, _ = socket.gethostbyaddr(ip)
-            return hostname
+            if hostname and hostname != ip:
+                return hostname
         except:
-            return None
+            pass
+        
+        # Method 2: nslookupコマンドを使用（Docker環境での代替手段）
+        try:
+            result = subprocess.run(['nslookup', ip], 
+                                  capture_output=True, text=True, timeout=3)
+            if result.returncode == 0:
+                lines = result.stdout.split('\n')
+                for line in lines:
+                    if 'name =' in line:
+                        hostname = line.split('name =')[-1].strip().rstrip('.')
+                        if hostname and hostname != ip:
+                            return hostname
+        except:
+            pass
+        
+        # Method 3: nmapから取得（利用可能な場合）
+        try:
+            if hasattr(self, 'nm') and ip in self.nm.all_hosts():
+                if 'hostnames' in self.nm[ip]:
+                    hostnames = self.nm[ip]['hostnames']
+                    if hostnames and len(hostnames) > 0:
+                        hostname = hostnames[0].get('name', '')
+                        if hostname and hostname != ip:
+                            return hostname
+        except:
+            pass
+            
+        return None
+    
+    def _is_running_in_docker(self) -> bool:
+        """
+        Docker環境内で実行されているかどうかを判定
+        """
+        try:
+            with open('/proc/1/cgroup', 'r') as f:
+                return 'docker' in f.read()
+        except:
+            return False
+    
+    def _scan_with_ping_validation(self, network_range: str) -> List[Dict]:
+        """
+        Docker環境での実際のpingベースのスキャン
+        """
+        devices = []
+        import ipaddress
+        
+        try:
+            # CIDR記法を解析
+            if '/' in network_range:
+                network = ipaddress.IPv4Network(network_range, strict=False)
+                ip_list = list(network.hosts())
+            elif '-' in network_range:
+                # 範囲記法 (例: 192.168.1.1-20)
+                start_ip, end_range = network_range.split('-')
+                start_parts = start_ip.split('.')
+                start_num = int(start_parts[-1])
+                end_num = int(end_range)
+                base_ip = '.'.join(start_parts[:-1])
+                ip_list = [ipaddress.IPv4Address(f"{base_ip}.{i}") for i in range(start_num, end_num + 1)]
+            else:
+                # 単一IP
+                ip_list = [ipaddress.IPv4Address(network_range)]
+            
+            print(f"検証対象IP数: {len(ip_list)}")
+            
+            # 並列でpingチェックを実行（最大20並列）
+            with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+                future_to_ip = {executor.submit(self._ping_check, str(ip)): str(ip) for ip in ip_list}
+                
+                for future in concurrent.futures.as_completed(future_to_ip):
+                    ip_str = future_to_ip[future]
+                    try:
+                        is_online = future.result()
+                        if is_online:
+                            print(f"応答あり: {ip_str}")
+                            device_info = {
+                                'ip_address': ip_str,
+                                'status': 'online',
+                                'hostname': self._get_hostname(ip_str),
+                                'mac_address': self._get_mac_address(ip_str),
+                                'vendor': None  # Docker環境では制限される
+                            }
+                            devices.append(device_info)
+                        else:
+                            print(f"応答なし: {ip_str}")
+                    except Exception as e:
+                        print(f"エラー {ip_str}: {e}")
+                    
+        except Exception as e:
+            print(f"スキャン処理エラー: {e}")
+            
+        return devices
+    
+    def _ping_check(self, ip_str: str) -> bool:
+        """
+        個別IPアドレスのpingチェック
+        """
+        try:
+            result = subprocess.run(['ping', '-c', '1', '-W', '1', ip_str], 
+                                  capture_output=True, text=True, timeout=2)
+            return result.returncode == 0
+        except:
+            return False
             
     def _get_mac_address(self, ip: str) -> Optional[str]:
         """

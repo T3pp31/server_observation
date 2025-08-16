@@ -10,8 +10,19 @@ interface ScanModalProps {
 
 const ScanModal: React.FC<ScanModalProps> = ({ show, onHide, onScanComplete }) => {
   const [networkRange, setNetworkRange] = useState('192.168.1.0/24');
+  const [customRange, setCustomRange] = useState('');
+  const [useCustomRange, setUseCustomRange] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const commonNetworks = [
+    { label: '192.168.1.0/24 (一般的な家庭用)', value: '192.168.1.0/24' },
+    { label: '192.168.0.0/24 (一般的な家庭用)', value: '192.168.0.0/24' },
+    { label: '10.0.0.0/24 (企業用)', value: '10.0.0.0/24' },
+    { label: '172.16.0.0/24 (企業用)', value: '172.16.0.0/24' },
+    { label: '192.168.1.1-20 (範囲指定)', value: '192.168.1.1-20' },
+    { label: 'カスタム', value: 'custom' }
+  ];
 
   const normalizeNetworkRange = (input: string): string => {
     const trimmed = input.trim();
@@ -32,11 +43,31 @@ const ScanModal: React.FC<ScanModalProps> = ({ show, onHide, onScanComplete }) =
     return trimmed;
   };
 
+  const handleNetworkSelection = (value: string) => {
+    if (value === 'custom') {
+      setUseCustomRange(true);
+      setNetworkRange('');
+    } else {
+      setUseCustomRange(false);
+      setNetworkRange(value);
+    }
+  };
+
+  const getCurrentRange = () => {
+    return useCustomRange ? customRange : networkRange;
+  };
+
   const handleScan = async () => {
     setScanning(true);
     setError(null);
     try {
-      const normalizedRange = normalizeNetworkRange(networkRange);
+      const currentRange = getCurrentRange();
+      if (!currentRange.trim()) {
+        setError('ネットワーク範囲を指定してください');
+        return;
+      }
+      
+      const normalizedRange = normalizeNetworkRange(currentRange);
       console.log('Scanning network range:', normalizedRange);
       
       const response = await deviceService.scanNetwork(normalizedRange);
@@ -73,15 +104,31 @@ const ScanModal: React.FC<ScanModalProps> = ({ show, onHide, onScanComplete }) =
         <Form>
           <Form.Group className="mb-3">
             <Form.Label>ネットワーク範囲</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="例: 192.168.1.0/24"
-              value={networkRange}
-              onChange={(e) => setNetworkRange(e.target.value)}
+            <Form.Select
+              value={useCustomRange ? 'custom' : networkRange}
+              onChange={(e) => handleNetworkSelection(e.target.value)}
               disabled={scanning}
-            />
+              className="mb-2"
+            >
+              {commonNetworks.map((network) => (
+                <option key={network.value} value={network.value}>
+                  {network.label}
+                </option>
+              ))}
+            </Form.Select>
+            
+            {useCustomRange && (
+              <Form.Control
+                type="text"
+                placeholder="例: 192.168.1.0/24, 10.0.0.1-50, 172.16.1.100"
+                value={customRange}
+                onChange={(e) => setCustomRange(e.target.value)}
+                disabled={scanning}
+              />
+            )}
+            
             <Form.Text className="text-muted">
-              CIDR形式（例: 192.168.1.0/24）または単一IPアドレス（例: 192.168.1.100）を入力してください
+              対応形式：CIDR記法（192.168.1.0/24）、範囲指定（192.168.1.1-20）、単一IP（192.168.1.100）
             </Form.Text>
           </Form.Group>
         </Form>

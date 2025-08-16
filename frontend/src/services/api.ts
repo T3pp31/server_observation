@@ -44,4 +44,10 @@ export const deviceService = {
     const response = await api.put(`/api/devices/${ipAddress}`, data);
     return response.data;
   },
+
+  // 全デバイスをリセット
+  resetDevices: async () => {
+    const response = await api.delete('/api/devices/reset');
+    return response.data;
+  },
 };
