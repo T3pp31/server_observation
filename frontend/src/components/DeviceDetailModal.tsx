@@ -157,8 +157,15 @@ const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({ show, onHide, ipA
                     onClick={handlePortScan}
                     disabled={scanning}
                   >
-                    {scanning ? 'スキャン中...' : 'ポートスキャン実行'}
+                    {scanning ? '全ポートスキャン中... (1-65535)' : '全ポートスキャン実行 (1-65535)'}
                   </Button>
+                  {scanning && (
+                    <div className="mt-2">
+                      <small className="text-muted">
+                        全ポート（65535個）をスキャンしています。完了まで数分かかる場合があります。
+                      </small>
+                    </div>
+                  )}
                 </div>
                 {renderPortScans(deviceDetail.port_scans)}
               </Tab.Pane>
